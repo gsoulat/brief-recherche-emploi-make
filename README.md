@@ -2,6 +2,8 @@
 
 Brief Data Analyst d'une journée (7 h), individuel et guidé : l'apprenant apprend d'abord Make avec les tutos 1 et 2, puis construit seul un scénario qui récupère chaque semaine les offres « data analyst » de France Travail, les range dans un Google Sheet de suivi de candidatures et envoie une alerte sur Discord. Le tuto 3 sert de corrigé et n'est remis qu'après le rendu.
 
+> Variante sans France Travail : **[version JSearch (OpenWeb Ninja) de ce brief](https://github.com/gsoulat/brief-recherche-emploi-make/blob/main/brief-version-jsearch.md)**, pour les comptes francetravail.io qui n'ont plus accès à l'API Offres d'emploi.
+
 ## Fiche Simplonline
 
 **Titre** : Automatiser sa recherche d'emploi Data Analyst avec Make et l'API France Travail
@@ -77,6 +79,7 @@ Travail **individuel**, sur une journée : la phase 0 le matin (2 h), puis le pr
 - **6. Alerte Discord** — Durée : 30 min — Point de contrôle : Une alerte par offre dans le salon
 - **7. Tester, planifier, compter** — Durée : 20 min — Point de contrôle : Scénario planifié, crédits estimés
 - **8. Documenter et préparer la démo** — Durée : 40 min — Point de contrôle : dépôt GitHub prêt (document, blueprint, captures)
+- **Bonus (si la première version fonctionne). Éviter les doublons** — Durée : 30 min — Point de contrôle : Un second Run once n'ajoute aucune ligne
 
 **Étape 1 — Ouvrir l'accès à l'API France Travail**
 
@@ -147,6 +150,8 @@ Questions guidantes : pourquoi une exécution par semaine avec « offres des 7 d
 4. **Captures** : prenez-les avec l'outil Capture d'écran (Windows : `Win+Maj+S` ; Mac : `Cmd+Maj+4`). Masquez chaque secret ou donnée personnelle par un rectangle plein (Paint, Aperçu…) ou recadrez l'image pour l'exclure.
 5. **Dépôt GitHub** : sur github.com, cliquez sur **« + »** en haut à droite > **New repository**, nommez-le `recherche-emploi-make-<prénom>`, choisissez **Public**, cochez **Add a README file**, puis **Create repository**. Cliquez ensuite sur **Add file > Upload files**, glissez votre document, le blueprint et les captures (pas de fichier .zip), puis **Commit changes**. Vérifiez une dernière fois qu'aucun secret n'apparaît.
 6. Préparez une démo de 5 minutes.
+
+![Menu « … » du scénario, puis Export blueprint](https://raw.githubusercontent.com/gsoulat/brief-recherche-emploi-make/main/images/13-export-blueprint.png)
 
 ## Zoom sur les modules HTTP
 
@@ -253,6 +258,24 @@ Après le module Google Sheets, ajoutez un troisième **HTTP > Make a request** 
 À vous de composer le message avec les pastilles de l'offre (intitulé, entreprise, lieu, contrat, lien). Astuce : dans Discord, un texte entouré de `**` s'affiche en gras.
 
 ![Module Discord : multipart/form-data et champ content](https://raw.githubusercontent.com/gsoulat/brief-recherche-emploi-make/main/images/12-module-discord.png)
+
+## Bonus — Ne plus ajouter de doublons
+
+À faire **uniquement quand la première version fonctionne** (Sheet rempli, alertes Discord reçues, scénario planifié).
+
+**Le problème.** Si le scénario tourne deux fois dans la même semaine (un Run once de test, une démo, une planification modifiée), les mêmes offres sont ajoutées une deuxième fois dans le Sheet et vous recevez de nouveau les mêmes alertes.
+
+**L'idée.** Avant d'ajouter une offre, Make **regarde ce qui existe déjà dans le Google Sheet** : si l'offre y est déjà, on ne l'ajoute pas et on n'envoie pas d'alerte. En Python, ce serait `if offre not in deja_vues: ajouter(offre)`.
+
+1. Faites un **clic droit sur la liaison** (les petits points) entre l'Iterator et **Add a Row**, puis **Add module** > **Google Sheets** > **Search Rows**.
+2. Réglez-le sur le **même Sheet** et le **même onglet** que Add a Row, **Table contains headers** : `Yes`.
+3. Dans **Filter**, choisissez la colonne **ID offre (H)**, l'opérateur **Text operators: Equal to**, et cliquez la pastille **`id`** de l'offre en cours (sous l'Iterator). Mettez **Limit** à `1` : une seule ligne trouvée suffit pour savoir que l'offre existe.
+4. Cliquez sur la **liaison** entre Search Rows et Add a Row pour créer un **filtre** nommé `Offre absente du Sheet`, avec la condition : pastille **Total number of bundles** de Search Rows, opérateur **Numeric operators: Equal to**, valeur `0`.
+5. Sauvegardez, puis testez : lancez **Run once** deux fois de suite. Au deuxième passage, le filtre doit laisser passer **0** offre : aucune nouvelle ligne, aucune alerte.
+
+> 💡 Pourquoi « Total number of bundles = 0 » ? Search Rows renvoie toujours un résultat, même quand il ne trouve rien : il indique alors **0** dans *Total number of bundles*. C'est ce nombre que le filtre teste. Chaque vérification consomme 1 crédit par offre : comptez-le dans votre estimation.
+
+Questions guidantes : pourquoi chercher sur l'identifiant de l'offre plutôt que sur l'intitulé ? Combien de crédits Make ce bonus ajoute-t-il par exécution ?
 
 ## Livrables attendus
 
