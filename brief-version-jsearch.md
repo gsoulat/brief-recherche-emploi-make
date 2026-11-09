@@ -122,13 +122,12 @@ Questions guidantes : à quoi sert la colonne « site d'origine » ? Quelles col
 Comme dans le tuto 2 : un **Iterator** sur la liste des offres, puis **Google Sheets > Add a Row**.
 
 1. **Iterator** : cliquez dans le champ **Array**. Dans le panneau des pastilles, sous **HTTP (module 1)**, dépliez **Data**, puis **data**, et cliquez sur **`jobs[]`**. Si le panneau est vide, testez d'abord le module HTTP : Make ne connaît les champs qu'après une première exécution.
-2. **Add a Row** : choisissez votre Sheet et sa feuille. Les champs d'une offre apparaissent alors sous le module **Iterator** : `job_posted_at_datetime_utc`, `job_title`, `employer_name`, `job_location`, `job_employment_type`, `job_publisher` et `job_apply_link`. **Laissez vides** dans Make les champs statut, date de candidature et notes : c'est vous qui les remplirez.
+2. **Add a Row** : choisissez votre Sheet et sa feuille. Les champs d'une offre apparaissent alors sous le module **Iterator**. À vous de retrouver, dans la sortie du module HTTP (voir *Tester le module* plus bas), le champ qui correspond à chacune de vos colonnes. **Laissez vides** dans Make les champs statut, date de candidature et notes : c'est vous qui les remplirez.
 
 Indices pour le nettoyage (remplacez « pastille » par la pastille du champ, en cliquant dessus) :
 
 - Date au format JJ/MM/AAAA : `formatDate(pastille; "DD/MM/YYYY")`
 - Valeur absente remplacée : `ifempty(pastille; "Non communiqué")`
-- Lien de l'offre : le champ `job_apply_link` est déjà un lien complet, il suffit de le placer dans la bonne colonne.
 
 Les fonctions se trouvent aussi dans les onglets du panneau des pastilles (icône calendrier pour les dates, icône engrenage pour `ifempty`). Les séparateurs sont des **points-virgules**.
 
@@ -213,11 +212,10 @@ Faites un **clic droit** sur le module HTTP, puis **« Run this module only »**
 
 ![Sortie du module : Status Code 200 et 10 offres dans jobs](https://raw.githubusercontent.com/gsoulat/brief-recherche-emploi-make/main/images-jsearch/16-sortie-jobs.png)
 
-Chaque offre est un **bundle** (en Python, un dictionnaire). Repérez les champs utiles pour votre Sheet :
+Chaque offre est un **bundle** (en Python, un dictionnaire). Dépliez-en une et repérez les champs utiles pour votre Sheet (intitulé, entreprise, lieu, contrat, date, lien…) :
 
-![Première offre : job_title, employer_name, job_apply_link](https://raw.githubusercontent.com/gsoulat/brief-recherche-emploi-make/main/images-jsearch/17-premiere-offre.png)
+![Exemple d'offre dans la sortie du module](https://raw.githubusercontent.com/gsoulat/brief-recherche-emploi-make/main/images-jsearch/17-premiere-offre.png)
 
-![Date de publication et lieu de l'offre](https://raw.githubusercontent.com/gsoulat/brief-recherche-emploi-make/main/images-jsearch/18-champs-offre.png)
 
 - **401 ou 403** : Clé absente ou mal collée (espace en trop, clé incomplète) ou header mal nommé : il faut exactement `x-api-key`
 - **429** : Quota dépassé (200 requêtes par mois sur l'offre gratuite) : attendez le mois suivant
@@ -245,17 +243,17 @@ Après le module Google Sheets, ajoutez un deuxième **HTTP > Make a request** :
 
 **Le problème.** Si le scénario tourne deux fois dans la même semaine (un Run once de test, une démo, une planification modifiée), les mêmes offres sont ajoutées une deuxième fois dans le Sheet et vous recevez de nouveau les mêmes alertes.
 
-**L'idée.** Avant d'ajouter une offre, Make **regarde ce qui existe déjà dans le Google Sheet** : si l'offre y est déjà, on ne l'ajoute pas et on n'envoie pas d'alerte. En Python, ce serait `if offre not in deja_vues: ajouter(offre)`.
+**L'objectif.** Avant d'ajouter une offre, Make doit **regarder ce qui existe déjà dans le Google Sheet** : si l'offre y est déjà, on ne l'ajoute pas et on n'envoie pas d'alerte. En Python, ce serait `if offre not in deja_vues: ajouter(offre)`.
 
-1. Faites un **clic droit sur la liaison** (les petits points) entre l'Iterator et **Add a Row**, puis **Add module** > **Google Sheets** > **Search Rows**.
-2. Réglez-le sur le **même Sheet** et le **même onglet** que Add a Row, **Table contains headers** : `Yes`.
-3. Dans **Filter**, choisissez la colonne **Lien de l'offre (G)**, l'opérateur **Text operators: Equal to**, et cliquez la pastille **`job_apply_link`** de l'offre en cours (sous l'Iterator). Mettez **Limit** à `1` : une seule ligne trouvée suffit pour savoir que l'offre existe.
-4. Cliquez sur la **liaison** entre Search Rows et Add a Row pour créer un **filtre** nommé `Offre absente du Sheet`, avec la condition : pastille **Total number of bundles** de Search Rows, opérateur **Numeric operators: Equal to**, valeur `0`.
-5. Sauvegardez, puis testez : lancez **Run once** deux fois de suite. Au deuxième passage, le filtre doit laisser passer **0** offre : aucune nouvelle ligne, aucune alerte.
+Pistes :
 
-> 💡 Pourquoi « Total number of bundles = 0 » ? Search Rows renvoie toujours un résultat, même quand il ne trouve rien : il indique alors **0** dans *Total number of bundles*. C'est ce nombre que le filtre teste. Chaque vérification consomme 1 crédit Make par offre (mais aucune requête JSearch en plus) : comptez-le dans votre estimation.
+- Make sait insérer un module **entre deux modules existants** : faites un clic droit sur la liaison (les petits points).
+- L'app **Google Sheets** propose un module qui **cherche des lignes** selon un critère. Quelle colonne de votre Sheet identifie une offre de façon unique (indice : ce n'est pas l'intitulé) ?
+- Un **filtre** sur une liaison peut laisser passer ou bloquer la suite. Observez dans la bulle ce que renvoie le module de recherche quand il ne trouve **rien** : un des champs vaut alors `0`.
 
-Questions guidantes : pourquoi chercher sur le lien de l'offre plutôt que sur l'intitulé ? Combien de crédits Make ce bonus ajoute-t-il par exécution ?
+**Point de contrôle :** lancez **Run once** deux fois de suite. Au deuxième passage, aucune nouvelle ligne et aucune alerte.
+
+Questions guidantes : pourquoi ne pas chercher sur l'intitulé de l'offre ? Combien de crédits Make ce bonus ajoute-t-il par exécution ?
 
 ## Livrables attendus
 

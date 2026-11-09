@@ -265,17 +265,17 @@ Après le module Google Sheets, ajoutez un troisième **HTTP > Make a request** 
 
 **Le problème.** Si le scénario tourne deux fois dans la même semaine (un Run once de test, une démo, une planification modifiée), les mêmes offres sont ajoutées une deuxième fois dans le Sheet et vous recevez de nouveau les mêmes alertes.
 
-**L'idée.** Avant d'ajouter une offre, Make **regarde ce qui existe déjà dans le Google Sheet** : si l'offre y est déjà, on ne l'ajoute pas et on n'envoie pas d'alerte. En Python, ce serait `if offre not in deja_vues: ajouter(offre)`.
+**L'objectif.** Avant d'ajouter une offre, Make doit **regarder ce qui existe déjà dans le Google Sheet** : si l'offre y est déjà, on ne l'ajoute pas et on n'envoie pas d'alerte. En Python, ce serait `if offre not in deja_vues: ajouter(offre)`.
 
-1. Faites un **clic droit sur la liaison** (les petits points) entre l'Iterator et **Add a Row**, puis **Add module** > **Google Sheets** > **Search Rows**.
-2. Réglez-le sur le **même Sheet** et le **même onglet** que Add a Row, **Table contains headers** : `Yes`.
-3. Dans **Filter**, choisissez la colonne **ID offre (H)**, l'opérateur **Text operators: Equal to**, et cliquez la pastille **`id`** de l'offre en cours (sous l'Iterator). Mettez **Limit** à `1` : une seule ligne trouvée suffit pour savoir que l'offre existe.
-4. Cliquez sur la **liaison** entre Search Rows et Add a Row pour créer un **filtre** nommé `Offre absente du Sheet`, avec la condition : pastille **Total number of bundles** de Search Rows, opérateur **Numeric operators: Equal to**, valeur `0`.
-5. Sauvegardez, puis testez : lancez **Run once** deux fois de suite. Au deuxième passage, le filtre doit laisser passer **0** offre : aucune nouvelle ligne, aucune alerte.
+Pistes :
 
-> 💡 Pourquoi « Total number of bundles = 0 » ? Search Rows renvoie toujours un résultat, même quand il ne trouve rien : il indique alors **0** dans *Total number of bundles*. C'est ce nombre que le filtre teste. Chaque vérification consomme 1 crédit par offre : comptez-le dans votre estimation.
+- Make sait insérer un module **entre deux modules existants** : faites un clic droit sur la liaison (les petits points).
+- L'app **Google Sheets** propose un module qui **cherche des lignes** selon un critère. Quelle colonne de votre Sheet identifie une offre de façon unique (indice : elle est remplie par Make mais pas lisible) ?
+- Un **filtre** sur une liaison peut laisser passer ou bloquer la suite. Observez dans la bulle ce que renvoie le module de recherche quand il ne trouve **rien** : un des champs vaut alors `0`.
 
-Questions guidantes : pourquoi chercher sur l'identifiant de l'offre plutôt que sur l'intitulé ? Combien de crédits Make ce bonus ajoute-t-il par exécution ?
+**Point de contrôle :** lancez **Run once** deux fois de suite. Au deuxième passage, aucune nouvelle ligne et aucune alerte.
+
+Questions guidantes : pourquoi ne pas chercher sur l'intitulé de l'offre ? Combien de crédits Make ce bonus ajoute-t-il par exécution ?
 
 ## Livrables attendus
 
